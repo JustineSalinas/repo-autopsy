@@ -5,6 +5,7 @@ import { computeTrustScore } from "@/lib/trustScore";
 import { getReadme, getFileTree, getFileContent, getOpenIssues } from "@/lib/github";
 import type { RepoContext, RepoFile, AnalyzeRequest } from "@/lib/types";
 import type { SourceFile } from "@/lib/blastRadius";
+import { isIgnoredPath, parseGitignorePatterns } from "@/lib/pathFilter";
 
 // ---------------------------------------------------------------------------
 // POST /api/analyze
@@ -113,11 +114,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     return CODE_EXTENSIONS.has(ext);
   };
 
+  const isKeptFile = (p: string) => isSourceFile(p) && !isIgnoredPath(p);
   const prioritised = blobPaths.filter(
-    (p) => isSourceFile(p) && SOURCE_DIR_PREFIXES.some((prefix) => p.startsWith(prefix))
+    (p) => isKeptFile(p) && SOURCE_DIR_PREFIXES.some((prefix) => p.startsWith(prefix))
   );
   const rest = blobPaths.filter(
-    (p) => isSourceFile(p) && !SOURCE_DIR_PREFIXES.some((prefix) => p.startsWith(prefix))
+    (p) => isKeptFile(p) && !SOURCE_DIR_PREFIXES.some((prefix) => p.startsWith(prefix))
   );
   // Prioritised files first, then fill remaining slots from the rest
   const codeBlobs = [...prioritised, ...rest].slice(0, MAX_CODE_FILES);
@@ -161,8 +163,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   // Stage 1 detectors still use plain string content
   const codeContents = sourceFiles.map((f) => f.content);
 
+  const gitignorePatterns = gitignoreContent
+    ? parseGitignorePatterns(gitignoreContent)
+    : undefined;
+
   const driftReport = runDriftDetection(ctx, codeContents);
-  const starterTasks = runBlastRadius(sourceFiles, issues);
+  const starterTasks = runBlastRadius(sourceFiles, issues, gitignorePatterns);
   const trustScore = computeTrustScore(driftReport.driftFindings, starterTasks);
 
   return NextResponse.json({ ...driftReport, starterTasks, trustScore });

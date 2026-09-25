@@ -11,6 +11,7 @@
 
 import type { StarterTask, RiskLevel } from "./types";
 import type { GhIssue } from "./github";
+import { isIgnoredPath } from "./pathFilter";
 
 export interface SourceFile {
   path: string;
@@ -343,13 +344,15 @@ function reasonForIssue(
 
 export function runBlastRadius(
   files: SourceFile[],
-  issues: GhIssue[]
+  issues: GhIssue[],
+  gitignorePatterns?: Set<string>
 ): StarterTask[] {
-  const { reverse, forward } = buildDepMaps(files);
+  const filteredFiles = files.filter((f) => !isIgnoredPath(f.path, gitignorePatterns));
+  const { reverse, forward } = buildDepMaps(filteredFiles);
   const tasks: StarterTask[] = [];
 
   // ── TODOs ────────────────────────────────────────────────────────────────
-  const todos = extractTodos(files);
+  const todos = extractTodos(filteredFiles);
   for (const todo of todos) {
     const entry = isEntryPoint(todo.file);
     let dependents: number;
@@ -434,7 +437,7 @@ export function runBlastRadius(
       .split(/\s+/)
       .filter((w) => w.length >= 3 && !STOP_WORDS.has(w));
 
-    const matchedPaths = files
+    const matchedPaths = filteredFiles
       .map((f) => f.path)
       .filter((p) => keywords.some((kw) => p.toLowerCase().includes(kw)));
 
