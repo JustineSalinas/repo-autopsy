@@ -1018,6 +1018,18 @@ export default function ReportPage({
                   <span className="font-mono tabular-nums">{report.meta.filesScanned}</span> files scanned
                 </span>
                 <span style={{ color: "var(--risk-moderate)" }}>Partial scan</span>
+                <Link
+                  href="/methodology"
+                  style={{
+                    fontFamily: "var(--font-plex-mono), monospace",
+                    fontSize: 11,
+                    letterSpacing: "0.06em",
+                    color: "var(--accent)",
+                    textDecoration: "none",
+                  }}
+                >
+                  Methodology ↗
+                </Link>
               </div>
             )}
           </header>
