@@ -1,194 +1,221 @@
 "use client";
 
 import { useState } from "react";
-import type { DriftReport, DriftFinding } from "@/lib/types";
+import { useRouter } from "next/navigation";
 
-const SEVERITY_STYLES: Record<string, string> = {
-  high: "bg-red-50 border-red-300 text-red-800",
-  medium: "bg-yellow-50 border-yellow-300 text-yellow-800",
-  low: "bg-blue-50 border-blue-300 text-blue-700",
-};
+const EXAMPLE_REPOS = [
+  { label: "JustineSalinas/pharmatrack", url: "https://github.com/JustineSalinas/pharmatrack" },
+  { label: "JustineSalinas/Tuon", url: "https://github.com/JustineSalinas/Tuon" },
+];
 
-const SEVERITY_BADGE: Record<string, string> = {
-  high: "bg-red-100 text-red-700",
-  medium: "bg-yellow-100 text-yellow-700",
-  low: "bg-blue-100 text-blue-700",
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  unused_env_var: "Unused Env Var",
-  missing_setup_file: "Missing Setup File",
-  stale_description: "Stale Description",
-};
-
-function FindingCard({ finding }: { finding: DriftFinding }) {
-  return (
-    <div
-      className={`border rounded-lg px-4 py-3 text-sm ${SEVERITY_STYLES[finding.severity]}`}
-    >
-      <div className="flex items-center gap-2 mb-1">
-        <span
-          className={`text-xs font-semibold px-2 py-0.5 rounded-full ${SEVERITY_BADGE[finding.severity]}`}
-        >
-          {finding.severity.toUpperCase()}
-        </span>
-        <span className="font-medium">{TYPE_LABEL[finding.type] ?? finding.type}</span>
-      </div>
-      <p>{finding.description}</p>
-    </div>
-  );
+function parseRepoPath(input: string): { owner: string; repo: string } | null {
+  try {
+    const trimmed = input.trim().replace(/\.git$/, "");
+    // Full URL
+    if (trimmed.startsWith("http")) {
+      const u = new URL(trimmed);
+      const parts = u.pathname.replace(/^\//, "").split("/");
+      if (parts.length >= 2 && parts[0] && parts[1]) {
+        return { owner: parts[0], repo: parts[1] };
+      }
+      return null;
+    }
+    // owner/repo shorthand
+    const parts = trimmed.split("/");
+    if (parts.length === 2 && parts[0] && parts[1]) {
+      return { owner: parts[0], repo: parts[1] };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
-export default function Home() {
-  const [repoUrl, setRepoUrl] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [report, setReport] = useState<DriftReport | null>(null);
+export default function HomePage() {
+  const router = useRouter();
+  const [input, setInput] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleAnalyze(e: React.FormEvent) {
-    e.preventDefault();
-    if (!repoUrl.trim()) return;
-
-    setLoading(true);
-    setReport(null);
-    setError(null);
-
-    try {
-      const res = await fetch("/api/analyze", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ repoUrl }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setError((data as { error?: string }).error ?? "Analysis failed.");
-      } else {
-        setReport(data as DriftReport);
-      }
-    } catch {
-      setError("Network error — please try again.");
-    } finally {
-      setLoading(false);
+  function navigate(value: string) {
+    const parsed = parseRepoPath(value);
+    if (!parsed) {
+      setError("Enter a GitHub URL or owner/repo (e.g. owner/repo).");
+      return;
     }
+    setError(null);
+    router.push(`/report/${parsed.owner}/${parsed.repo}`);
   }
 
-  const counts = report
-    ? {
-        high: report.driftFindings.filter((f) => f.severity === "high").length,
-        medium: report.driftFindings.filter((f) => f.severity === "medium").length,
-        low: report.driftFindings.filter((f) => f.severity === "low").length,
-      }
-    : null;
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    navigate(input);
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50 py-16 px-4">
-      <div className="max-w-2xl mx-auto">
-        {/* Header */}
-        <div className="mb-10 text-center">
-          <h1 className="text-4xl font-bold text-gray-900 tracking-tight">
-            🔬 Repo Autopsy
-          </h1>
-          <p className="mt-3 text-gray-500 text-base">
-            Analyze public GitHub repositories for documentation drift and
-            generate a safety-ranked onboarding path.
-          </p>
-        </div>
-
-        {/* Form */}
-        <form onSubmit={handleAnalyze} className="flex gap-2">
-          <input
-            type="url"
-            value={repoUrl}
-            onChange={(e) => setRepoUrl(e.target.value)}
-            placeholder="https://github.com/owner/repo"
-            className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-          />
-          <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+    <main
+      style={{ background: "var(--paper)", color: "var(--ink)" }}
+      className="flex flex-col min-h-dvh"
+    >
+      {/* Top rule */}
+      <div style={{ borderBottom: "1px solid var(--hairline)", padding: "0 24px" }}>
+        <div
+          style={{ maxWidth: 960, margin: "0 auto", display: "flex", alignItems: "center", height: 48 }}
+        >
+          <span
+            className="font-mono"
+            style={{ fontSize: 12, letterSpacing: "0.08em", color: "var(--muted)", textTransform: "uppercase" }}
           >
-            {loading ? "Analyzing…" : "Analyze"}
-          </button>
-        </form>
+            Repo Autopsy
+          </span>
+        </div>
+      </div>
 
-        {/* Error */}
-        {error && (
-          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      {/* Hero */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          padding: "64px 24px",
+        }}
+      >
+        <div style={{ maxWidth: 520, width: "100%" }}>
+          {/* Label */}
+          <p
+            className="font-mono"
+            style={{
+              fontSize: 11,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              color: "var(--muted)",
+              marginBottom: 16,
+            }}
+          >
+            Code health audit
+          </p>
 
-        {/* Results */}
-        {report && (
-          <div className="mt-8 space-y-6">
-            {/* Meta bar */}
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-sm">
-              <div>
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
-                  Repository
-                </p>
-                <p className="text-sm font-mono font-semibold text-gray-800">
-                  {report.repo}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
-                  Files scanned
-                </p>
-                <p className="text-sm font-semibold text-gray-800">
-                  {report.meta.filesScanned}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-xs text-gray-400 uppercase tracking-wide font-semibold">
-                  README
-                </p>
-                <p
-                  className={`text-sm font-semibold ${
-                    report.meta.readmeFound ? "text-green-600" : "text-red-500"
-                  }`}
-                >
-                  {report.meta.readmeFound ? "Found" : "Missing"}
-                </p>
-              </div>
+          {/* Headline */}
+          <h1
+            style={{
+              fontSize: "clamp(28px, 5vw, 40px)",
+              fontWeight: 600,
+              lineHeight: 1.2,
+              letterSpacing: "-0.02em",
+              marginBottom: 12,
+              color: "var(--ink)",
+            }}
+          >
+            Know what&rsquo;s safe to touch
+            <br />before you touch it.
+          </h1>
+
+          <p
+            style={{
+              fontSize: 15,
+              color: "var(--muted)",
+              marginBottom: 40,
+              lineHeight: 1.6,
+            }}
+          >
+            Paste a public GitHub repo. Get a ranked onboarding path, drift
+            findings, and a trust score — in seconds.
+          </p>
+
+          {/* Input form */}
+          <form onSubmit={handleSubmit}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => { setInput(e.target.value); setError(null); }}
+                placeholder="https://github.com/owner/repo"
+                aria-label="GitHub repository URL"
+                style={{
+                  flex: 1,
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 4,
+                  padding: "10px 14px",
+                  fontSize: 14,
+                  fontFamily: "inherit",
+                  background: "var(--paper)",
+                  color: "var(--ink)",
+                  outline: "none",
+                  minWidth: 0,
+                }}
+                onFocus={(e) => (e.currentTarget.style.borderColor = "var(--accent)")}
+                onBlur={(e) => (e.currentTarget.style.borderColor = "var(--hairline)")}
+              />
+              <button
+                type="submit"
+                style={{
+                  background: "var(--accent)",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "10px 20px",
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  fontFamily: "inherit",
+                }}
+              >
+                Analyze
+              </button>
             </div>
 
-            {/* Severity summary */}
-            {counts && (
-              <div className="grid grid-cols-3 gap-3 text-center">
-                {(["high", "medium", "low"] as const).map((s) => (
-                  <div
-                    key={s}
-                    className={`rounded-lg border px-3 py-3 ${SEVERITY_STYLES[s]}`}
-                  >
-                    <p className="text-2xl font-bold">{counts[s]}</p>
-                    <p className="text-xs font-semibold uppercase tracking-wide opacity-80">
-                      {s}
-                    </p>
-                  </div>
-                ))}
-              </div>
+            {error && (
+              <p
+                role="alert"
+                style={{ marginTop: 8, fontSize: 13, color: "var(--risk-risky)" }}
+              >
+                {error}
+              </p>
             )}
+          </form>
 
-            {/* Findings list */}
-            {report.driftFindings.length === 0 ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-6 text-center text-sm text-green-700">
-                ✅ No drift signals detected — documentation looks healthy!
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-                  Drift Findings ({report.driftFindings.length})
-                </h2>
-                {report.driftFindings.map((f, i) => (
-                  <FindingCard key={i} finding={f} />
-                ))}
-              </div>
-            )}
+          {/* Example chips */}
+          <div style={{ marginTop: 24, display: "flex", flexWrap: "wrap", gap: 8 }}>
+            <span style={{ fontSize: 12, color: "var(--muted)", alignSelf: "center" }}>
+              Examples:
+            </span>
+            {EXAMPLE_REPOS.map((ex) => (
+              <button
+                key={ex.label}
+                type="button"
+                onClick={() => navigate(ex.url)}
+                className="font-mono"
+                style={{
+                  fontSize: 12,
+                  border: "1px solid var(--hairline)",
+                  borderRadius: 4,
+                  padding: "4px 10px",
+                  background: "var(--surface)",
+                  color: "var(--ink)",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {ex.label}
+              </button>
+            ))}
           </div>
-        )}
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div
+        style={{
+          borderTop: "1px solid var(--hairline)",
+          padding: "16px 24px",
+          textAlign: "center",
+        }}
+      >
+        <p style={{ fontSize: 12, color: "var(--muted)" }}>
+          Only scans public repositories &mdash; no data is stored.
+        </p>
       </div>
     </main>
   );

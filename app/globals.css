@@ -1,26 +1,160 @@
 @import "tailwindcss";
 
+/* ── Design tokens ──────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  --paper: #fafaf7;
+  --ink: #111111;
+  --muted: #6b6b6b;
+  --hairline: #e4e2dc;
+  --accent: #1f3fbf;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Risk colours */
+  --risk-safe: #2f6b4f;
+  --risk-moderate: #9a6b12;
+  --risk-risky: #a33a2a;
+  --risk-unknown: #6b6b6b;
+
+  /* Surface shades */
+  --surface: #f2f1ec;
+  --surface-2: #eae9e3;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --paper: #111111;
+    --ink: #ebebeb;
+    --muted: #8a8a8a;
+    --hairline: #2a2a2a;
+    --accent: #5577f0;
+
+    --risk-safe: #4aaa79;
+    --risk-moderate: #c99033;
+    --risk-risky: #d1614d;
+    --risk-unknown: #8a8a8a;
+
+    --surface: #1a1a1a;
+    --surface-2: #222222;
   }
 }
 
+@theme inline {
+  --color-background: var(--paper);
+  --color-foreground: var(--ink);
+  --font-sans: var(--font-plex-sans);
+  --font-mono: var(--font-plex-mono);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  line-height: 1.6;
+  min-height: 100dvh;
+}
+
+/* ── Typography helpers ──────────────────────────────────────────────────── */
+.font-mono {
+  font-family: var(--font-plex-mono), "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Focus states ────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Hairline utility ────────────────────────────────────────────────────── */
+.hairline {
+  border: 1px solid var(--hairline);
+}
+.hairline-t { border-top: 1px solid var(--hairline); }
+.hairline-b { border-bottom: 1px solid var(--hairline); }
+
+/* ── Gauge ───────────────────────────────────────────────────────────────── */
+.gauge-track {
+  height: 4px;
+  background: var(--hairline);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.gauge-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* ── Skeleton animation ──────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { opacity: 0.4; }
+  50%  { opacity: 0.8; }
+  100% { opacity: 0.4; }
+}
+.skeleton {
+  background: var(--surface-2);
+  border-radius: 2px;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+
+/* ── Responsive: mobile table stacking ──────────────────────────────────── */
+@media (max-width: 600px) {
+  /* Convert tables to stacked rows on narrow viewports */
+  .stack-table table,
+  .stack-table thead,
+  .stack-table tbody,
+  .stack-table th,
+  .stack-table td,
+  .stack-table tr {
+    display: block;
+    width: 100%;
+  }
+
+  .stack-table thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+
+  .stack-table tr {
+    border-bottom: 1px solid var(--hairline);
+    padding: 8px 0;
+  }
+
+  .stack-table td {
+    padding: 4px 12px !important;
+    max-width: 100% !important;
+    text-align: left !important;
+    white-space: normal !important;
+  }
+
+  .stack-table td::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+}
+
+/* ── Print / Export ──────────────────────────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
 }
