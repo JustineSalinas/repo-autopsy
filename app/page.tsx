@@ -3,11 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-const EXAMPLE_REPOS = [
-  { label: "JustineSalinas/pharmatrack", url: "https://github.com/JustineSalinas/pharmatrack" },
-  { label: "JustineSalinas/Tuon", url: "https://github.com/JustineSalinas/Tuon" },
-];
-
 function parseRepoPath(input: string): { owner: string; repo: string } | null {
   try {
     const trimmed = input.trim().replace(/\.git$/, "");
@@ -177,31 +172,6 @@ export default function HomePage() {
           </form>
 
           {/* Example chips */}
-          <div style={{ marginTop: 24, display: "flex", flexWrap: "wrap", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "var(--muted)", alignSelf: "center" }}>
-              Examples:
-            </span>
-            {EXAMPLE_REPOS.map((ex) => (
-              <button
-                key={ex.label}
-                type="button"
-                onClick={() => navigate(ex.url)}
-                className="font-mono"
-                style={{
-                  fontSize: 12,
-                  border: "1px solid var(--hairline)",
-                  borderRadius: 4,
-                  padding: "4px 10px",
-                  background: "var(--surface)",
-                  color: "var(--ink)",
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                {ex.label}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
